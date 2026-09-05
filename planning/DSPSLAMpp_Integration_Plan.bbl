@@ -1,0 +1,75 @@
+\begin{thebibliography}{10}
+
+\bibitem{caesar2020nuscenes}
+Holger Caesar, Varun Bankiti, Alex~H. Lang, Sourabh Vora, Venice~Erin Liong,
+  Qiang Xu, Anush Krishnan, Yu~Pan, Giancarlo Baldan, and Oscar Beijbom.
+\newblock {nuScenes}: A multimodal dataset for autonomous driving.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 11621--11631, 2020.
+
+\bibitem{campos2021orbslam3}
+Carlos Campos, Richard Elvira, Juan J.~G. Rodr{\'i}guez, Jos{\'e} M.~M.
+  Montiel, and Juan~D. Tard{\'o}s.
+\newblock {ORB-SLAM3}: An accurate open-source library for visual,
+  visual-inertial, and multi-map {SLAM}.
+\newblock {\em IEEE Transactions on Robotics}, 37(6):1874--1890, 2021.
+
+\bibitem{chang2015shapenet}
+Angel~X. Chang, Thomas Funkhouser, Leonidas Guibas, Pat Hanrahan, Qixing Huang,
+  Zimo Li, Silvio Savarese, Manolis Savva, Shuran Song, Hao Su, Jianxiong Xiao,
+  Li~Yi, and Fisher Yu.
+\newblock {ShapeNet}: An information-rich 3d model repository.
+\newblock Technical Report arXiv:1512.03012 [cs.GR], Stanford University ---
+  Princeton University --- Toyota Technological Institute at Chicago, 2015.
+
+\bibitem{jocher2024yolo11}
+Glenn Jocher and Jing Qiu.
+\newblock Ultralytics {YOLO11}.
+\newblock \url{https://github.com/ultralytics/ultralytics}, 2024.
+
+\bibitem{kannala2006generic}
+Juho Kannala and Sami~S. Brandt.
+\newblock A generic camera model and calibration method for conventional,
+  wide-angle, and fish-eye lenses.
+\newblock {\em IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  28(8):1335--1340, 2006.
+
+\bibitem{kourani2026dspslampp}
+Ahmad Kourani, Ghina Daoud, Daniel Asmar, and Imad Elhajj.
+\newblock {DSP-SLAM++}: A unified framework for multi-class, high-fidelity
+  object {SLAM} in the wild.
+\newblock {\em arXiv preprint arXiv:2606.25953}, 2026.
+
+\bibitem{lang2019pointpillars}
+Alex~H. Lang, Sourabh Vora, Holger Caesar, Lubing Zhou, Jiong Yang, and Oscar
+  Beijbom.
+\newblock {PointPillars}: Fast encoders for object detection from point clouds.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 12697--12705, 2019.
+
+\bibitem{park2019deepsdf}
+Jeong~Joon Park, Peter Florence, Julian Straub, Richard Newcombe, and Steven
+  Lovegrove.
+\newblock {DeepSDF}: Learning continuous signed distance functions for shape
+  representation.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 165--174, 2019.
+
+\bibitem{sauerbeck2022rgbl}
+Fabian Sauerbeck, Benedikt Obermeier, Martin Rudolph, and Johannes Betz.
+\newblock {RGB-L}: Enhancing indirect visual {SLAM} using {LiDAR}-based dense
+  depth maps, 2022.
+
+\bibitem{wang2021dspslam}
+Jingwen Wang, Martin R{\"u}nz, and Lourdes Agapito.
+\newblock {DSP-SLAM}: Object oriented {SLAM} with deep shape priors.
+\newblock In {\em 2021 International Conference on 3D Vision (3DV)}, pages
+  1362--1371. IEEE, 2021.
+
+\bibitem{yin2021center}
+Tianwei Yin, Xingyi Zhou, and Philipp Kr{\"a}henb{\"u}hl.
+\newblock Center-based 3d object detection and tracking.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 11784--11793, 2021.
+
+\end{thebibliography}
