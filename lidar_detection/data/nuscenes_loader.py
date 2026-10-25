@@ -110,16 +110,21 @@ class NuScenesDataset:
                 return json.load(f)
 
         # ── file index: relative path → absolute path ─────────────────────────
+        # LIDAR_TOP (keyframes + sweeps, for point cloud accumulation) and
+        # CAM_FRONT (keyframes only -- for datasets/nuscenes_stream.py's
+        # SyncedFrame.image, needed by a real visual tracker / 2D detector;
+        # unused by the training-time __getitem__ path below).
         self._file_index: Dict[str, str] = {}
         for dr in data_roots:
             for subdir in ("samples", "sweeps"):
-                lidar_dir = os.path.join(dr, subdir, "LIDAR_TOP")
-                if not os.path.isdir(lidar_dir):
-                    continue
-                for fname in os.listdir(lidar_dir):
-                    if fname.endswith(".pcd.bin"):
-                        rel = f"{subdir}/LIDAR_TOP/{fname}"
-                        self._file_index[rel] = os.path.join(lidar_dir, fname)
+                for sensor in ("LIDAR_TOP", "CAM_FRONT"):
+                    sensor_dir = os.path.join(dr, subdir, sensor)
+                    if not os.path.isdir(sensor_dir):
+                        continue
+                    for fname in os.listdir(sensor_dir):
+                        if fname.endswith((".pcd.bin", ".jpg", ".jpeg", ".png")):
+                            rel = f"{subdir}/{sensor}/{fname}"
+                            self._file_index[rel] = os.path.join(sensor_dir, fname)
 
         # ── metadata ──────────────────────────────────────────────────────────
         self._ego_pose   = {e["token"]: e for e in _load("ego_pose.json")}
@@ -131,15 +136,18 @@ class NuScenesDataset:
         for ann in _load("sample_annotation.json"):
             self._ann_by_sample.setdefault(ann["sample_token"], []).append(ann)
 
-        # Index ALL LIDAR_TOP sample_data (keyframes + sweeps) by token
+        # Index ALL LIDAR_TOP sample_data (keyframes + sweeps) by token, plus
+        # CAM_FRONT keyframes (no sweep accumulation needed for a single image).
         self._sd_by_token: Dict[str, dict] = {}
         self._lidar_by_sample: Dict[str, dict] = {}
+        self._cam_front_by_sample: Dict[str, dict] = {}
         for sd in _load("sample_data.json"):
-            if "LIDAR_TOP" not in sd["filename"]:
-                continue
-            self._sd_by_token[sd["token"]] = sd
-            if sd["is_key_frame"]:
-                self._lidar_by_sample[sd["sample_token"]] = sd
+            if "LIDAR_TOP" in sd["filename"]:
+                self._sd_by_token[sd["token"]] = sd
+                if sd["is_key_frame"]:
+                    self._lidar_by_sample[sd["sample_token"]] = sd
+            elif "CAM_FRONT/" in sd["filename"] and sd["is_key_frame"]:
+                self._cam_front_by_sample[sd["sample_token"]] = sd
 
         # ── available keyframes ────────────────────────────────────────────────
         samples_json   = _load("sample.json")
@@ -298,6 +306,48 @@ class NuScenesDataset:
 
     def get_token(self, idx: int) -> str:
         return self._sample_tokens[idx]
+
+    def get_ego_pose(self, idx: int) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Global pose (R, t) of the keyframe LIDAR_TOP sensor at idx, such that
+        point_global = R @ point_lidar + t. Used by streaming adapters (SLAM
+        playback) and trajectory evaluation (ATE ground truth), where the
+        per-sample GT transform derived inside __getitem__ isn't exposed.
+        """
+        kf_sd    = self._lidar_by_sample[self._sample_tokens[idx]]
+        cal      = self._cal_sensor[kf_sd["calibrated_sensor_token"]]
+        ego_pose = self._ego_pose[kf_sd["ego_pose_token"]]
+        R_ego    = _quat_to_rot(ego_pose["rotation"])
+        t_ego    = np.array(ego_pose["translation"])
+        R_sensor = _quat_to_rot(cal["rotation"])
+        t_sensor = np.array(cal["translation"])
+        R = R_ego @ R_sensor
+        t = R_ego @ t_sensor + t_ego
+        return R, t
+
+    def get_timestamp(self, idx: int) -> float:
+        kf_sd = self._lidar_by_sample[self._sample_tokens[idx]]
+        return kf_sd["timestamp"] / 1e6   # microseconds -> seconds
+
+    def get_image(self, idx: int) -> Optional[np.ndarray]:
+        """CAM_FRONT keyframe image (H, W, 3) RGB uint8, or None if this
+        sample has no camera frame indexed (e.g. a LiDAR-only download) or
+        opencv-python isn't installed. Used by datasets/nuscenes_stream.py."""
+        try:
+            import cv2
+        except ImportError:
+            return None
+        token = self._sample_tokens[idx]
+        cam_sd = self._cam_front_by_sample.get(token)
+        if cam_sd is None:
+            return None
+        path = self._file_index.get(cam_sd["filename"])
+        if path is None:
+            return None
+        bgr = cv2.imread(path)
+        if bgr is None:
+            return None
+        return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
 
     # ── CBGS ─────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,29 @@
+# Runtime image for running this repo's Python pipeline (run_slam.py etc.)
+# with the REAL ORBSlam3Tracker, not DummyGTPoseTracker.
+#
+# Built FROM orbslam3:22.04 rather than installing a separate venv on the
+# WSL2 host: orbslam3_python.so is a native extension compiled against this
+# image's exact Python 3.10 -- a venv on the WSL2 host (Ubuntu 26.04, a
+# different Python/glibc) could not import it. This image IS the "mirrored
+# venv": same repo, same dependency versions as the Windows side, just
+# running on the Python that the compiled binding actually matches.
+#
+# Build: docker build -t orbslam3-runtime:22.04 -f Dockerfile.runtime .
+# Run:   docker run --rm -v /mnt/c/mohitk/SLAM/Code_tensor:/workspace -w /workspace \
+#            orbslam3-runtime:22.04 python3 run_slam.py --tracker orbslam3 ...
+
+FROM orbslam3:22.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Versions matched to the Windows venv (see README.md's requirements table)
+# where pip has them; opencv-python-headless instead of opencv-python since
+# this container has no display server. torch pulled separately from PyPI's
+# default index -- CPU wheel index only carries torch itself, so a single
+# combined install (torch + everything else under --index-url) fails to
+# resolve matplotlib/scikit-learn/etc.
+RUN pip3 install --no-cache-dir numpy matplotlib scikit-learn scikit-image flask opencv-python-headless
+RUN pip3 install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+ENV PYTHONPATH="/opt/ORB_SLAM3/lib:${PYTHONPATH}"

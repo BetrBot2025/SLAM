@@ -3,7 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import FancyArrow
-from typing import List, Dict, Optional
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from typing import List, Dict, Optional, Tuple
 
 
 CLASS_COLORS = {
@@ -100,6 +101,88 @@ def draw_bev(
         legend_handles.append(mpatches.Patch(color=color, label=f"Pred: {name}"))
     ax.legend(handles=legend_handles, loc="upper right", fontsize=8,
               facecolor="#1a1a2e", labelcolor="white")
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"Saved: {save_path}")
+    else:
+        plt.show()
+    plt.close(fig)
+
+
+def _box_corners_3d(box: list) -> np.ndarray:
+    """8 corners for a box [x,y,z,l,w,h,yaw] (z = box centre height)."""
+    x, y, z, l, w, h, yaw = box
+    c, s = np.cos(yaw), np.sin(yaw)
+    hl, hw, hh = l / 2, w / 2, h / 2
+    local = np.array([
+        [ hl,  hw, -hh], [ hl, -hw, -hh], [-hl, -hw, -hh], [-hl,  hw, -hh],
+        [ hl,  hw,  hh], [ hl, -hw,  hh], [-hl, -hw,  hh], [-hl,  hw,  hh],
+    ])
+    rot = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+    return local @ rot.T + np.array([x, y, z])
+
+
+_BOX_EDGES = [
+    (0, 1), (1, 2), (2, 3), (3, 0),   # bottom face
+    (4, 5), (5, 6), (6, 7), (7, 4),   # top face
+    (0, 4), (1, 5), (2, 6), (3, 7),   # verticals
+]
+
+
+def draw_3d_map(
+    objects: List[Dict],
+    trajectory_est: Optional[np.ndarray] = None,   # (N, 3)
+    trajectory_gt: Optional[np.ndarray] = None,     # (N, 3)
+    title: str = "3D Object Map",
+    save_path: Optional[str] = None,
+):
+    """WP10: Fig. 7/9-style 3D map -- object landmarks (mesh where available,
+    else a wireframe box placeholder) plus the estimated/GT trajectories.
+
+    objects: [{'center':[x,y,z], 'size':[l,w,h], 'yaw':float,
+               'class_name':str, 'mesh': Optional[(verts (M,3), faces (K,3))]}]
+    """
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
+
+    for obj in objects:
+        color = CLASS_COLORS.get(obj.get("class_name", ""), "#9E9E9E")
+        mesh = obj.get("mesh")
+        if mesh is not None:
+            verts, faces = mesh
+            cx, cy, cz = obj["center"]
+            world_verts = verts + np.array([cx, cy, cz])
+            poly = Poly3DCollection(world_verts[faces], alpha=0.6, facecolor=color, edgecolor="none")
+            ax.add_collection3d(poly)
+        else:
+            box = list(obj["center"]) + list(obj["size"]) + [obj.get("yaw", 0.0)]
+            corners = _box_corners_3d(box)
+            for i, j in _BOX_EDGES:
+                ax.plot(*zip(corners[i], corners[j]), color=color, linewidth=1.2)
+
+    if trajectory_gt is not None and len(trajectory_gt) > 0:
+        ax.plot(trajectory_gt[:, 0], trajectory_gt[:, 1], trajectory_gt[:, 2],
+                color="#00FF88", linewidth=1.5, linestyle="--", label="GT")
+    if trajectory_est is not None and len(trajectory_est) > 0:
+        ax.plot(trajectory_est[:, 0], trajectory_est[:, 1], trajectory_est[:, 2],
+                color="#2196F3", linewidth=1.5, label="Estimate")
+
+    handles = [mpatches.Patch(color=c, label=n) for n, c in CLASS_COLORS.items() if n != "Unknown"]
+    if trajectory_gt is not None:
+        handles.append(plt.Line2D([0], [0], color="#00FF88", linestyle="--", label="GT trajectory"))
+    if trajectory_est is not None:
+        handles.append(plt.Line2D([0], [0], color="#2196F3", label="Est. trajectory"))
+    ax.legend(handles=handles, loc="upper right", fontsize=8)
+
+    ax.set_xlabel("X [m]"); ax.set_ylabel("Y [m]"); ax.set_zlabel("Z [m]")
+    ax.set_title(title)
+
+    xlim, ylim, zlim = ax.get_xlim3d(), ax.get_ylim3d(), ax.get_zlim3d()
+    spans = [xlim[1] - xlim[0], ylim[1] - ylim[0], zlim[1] - zlim[0]]
+    if all(s > 0 for s in spans):
+        ax.set_box_aspect(spans)   # equal data scale on all 3 axes, not just equal pixel extent
 
     plt.tight_layout()
     if save_path:
